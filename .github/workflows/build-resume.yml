@@ -1,0 +1,54 @@
+name: Build resume
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build-resume.yml"
+      - "Makefile"
+      - "resume.tex"
+      - "resume-zh.tex"
+      - "resume.cls"
+      - "fontawesome.sty"
+      - "fontawesomesymbols-*.tex"
+      - "fonts/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: brew install tectonic
+
+      - name: Build PDF
+        run: make
+
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: resume-pdf
+          path: |
+            dist/resume-en.pdf
+            dist/resume-zh.pdf
+
+      - name: Commit updated PDF
+        run: |
+          if git diff --quiet -- dist/resume-en.pdf dist/resume-zh.pdf; then
+            echo "PDFs are already up to date."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dist/resume-en.pdf dist/resume-zh.pdf
+          git commit -m "Build resume PDFs"
+          git push
